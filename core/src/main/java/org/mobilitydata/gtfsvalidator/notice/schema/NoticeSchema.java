@@ -63,6 +63,12 @@ public class NoticeSchema {
    */
   @Nullable private List<String> replacementNoticeCodes;
 
+  /**
+   * True when the notice is a system error rather than a validation notice about the GTFS data.
+   * System errors still use {@link SeverityLevel#ERROR}, but they are not spec violations.
+   */
+  private boolean systemError = false;
+
   public NoticeSchema(String code, SeverityLevel severityLevel) {
     this.code = code;
     this.severityLevel = severityLevel;
@@ -142,5 +148,13 @@ public class NoticeSchema {
 
   public void setReplacementNoticeCodes(@Nullable List<String> replacementNoticeCodes) {
     this.replacementNoticeCodes = replacementNoticeCodes;
+  }
+
+  public boolean isSystemError() {
+    return systemError;
+  }
+
+  public void setSystemError(boolean systemError) {
+    this.systemError = systemError;
   }
 }

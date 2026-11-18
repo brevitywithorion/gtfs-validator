@@ -13,5 +13,6 @@
       "maxItems": 2
     }
   },
-  "deprecated": false
+  "deprecated": false,
+  "systemError": false
 }

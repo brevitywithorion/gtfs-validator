@@ -8,11 +8,23 @@
   const rules = $page.data.rules || [];
   const summaryMetadata = $page.data.summaryMetadata || [];
 
-  // Group rules by severity level
+  // System errors are recorded with severityLevel ERROR (see SystemError and
+  // NoticeContainer.addSystemError). rules.json marks them with systemError so they
+  // can be listed separately from GTFS spec violations.
+  const SYSTEM_ERROR = 'SYSTEM_ERROR';
+
+  // Group rules by severity level. System errors come first.
   $: categories = _.chain(rules)
+    .reject(rule => rule.systemError)
     .groupBy('severityLevel')
     .toPairs()
     .sortBy(([severityLevel]) => ['ERROR', 'WARNING', 'INFO'].indexOf(severityLevel))
+    .tap(pairs => {
+      const systemErrors = _.filter(rules, rule => rule.systemError);
+      if (systemErrors.length) {
+        pairs.unshift([SYSTEM_ERROR, systemErrors]);
+      }
+    })
     .fromPairs()
     .value();
   $: deprecatedRules = _.chain(rules)
@@ -30,6 +42,14 @@
   /** @param {string} filename */
   function getBestPracticeRef(filename) {
     return `https://gtfs.org/best-practices/#${filename.replace('.', '')}`;
+  }
+
+  /** @param {string} category */
+  function categoryHeading(category) {
+    if (category === SYSTEM_ERROR) {
+      return 'Table of system errors';
+    }
+    return `Table of ${category} notices`;
   }
 </script>
 
@@ -66,7 +86,7 @@
             <li><a href="#introduction">Introduction</a></li>
             <li><a href="#severities">Severities</a></li>
             {#each Object.entries(categories) as [category]}
-              <li><a href="#{category}-table">Table of {category} notices</a></li>
+              <li><a href="#{category}-table">{categoryHeading(category)}</a></li>
             {/each}
             <li><a href="#notice-details">Notice details</a></li>
             <li><a href="#summary-metadata">Summary metadata details</a></li>
@@ -89,6 +109,10 @@
             Understanding these severities helps in assessing the impact and urgency of addressing the identified
             issues.</p>
 
+          <p><strong>SYSTEM ERROR</strong> notices are not spec violations but additional insights shown if
+            the validator did not run properly. They are not related to the content of the GTFS data
+            itself. These notices will only be seen by CLI users.</p>
+
           <p><strong>ERROR</strong> notices correspond to GTFS Schedule Reference violations. These violations represent
             items explicitly required or prohibited by the GTFS Schedule Reference, denoted by the use of the terms
             “Required” or “must.” Errors signify critical discrepancies that must be resolved to ensure compliance with
@@ -110,7 +134,7 @@
             <a class="text-base order-last" href="#_top"><i class="fas fa-arrow-up"></i> Top</a>
 
             <div>
-              Table of {category} notices
+              {categoryHeading(category)}
               <a
                 class="text-xl"
                 href="#{category}-table"
@@ -120,6 +144,14 @@
               </a>
             </div>
           </h2>
+
+          {#if category === SYSTEM_ERROR}
+            <p>
+              These notices will only be seen by CLI users. They are not spec violations and are not
+              related to the content of the GTFS data itself. They are additional insights shown if the
+              validator did not run properly.
+            </p>
+          {/if}
 
           <div class="overflow-x-auto">
             <table class="w-full table-collapse-responsive sm:block lg:table">

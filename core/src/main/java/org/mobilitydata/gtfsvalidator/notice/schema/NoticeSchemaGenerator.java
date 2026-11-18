@@ -37,6 +37,7 @@ import org.mobilitydata.gtfsvalidator.annotation.GtfsValidationNotice.UrlRef;
 import org.mobilitydata.gtfsvalidator.notice.Notice;
 import org.mobilitydata.gtfsvalidator.notice.NoticeDocComments;
 import org.mobilitydata.gtfsvalidator.notice.SeverityLevel;
+import org.mobilitydata.gtfsvalidator.notice.SystemError;
 import org.mobilitydata.gtfsvalidator.notice.ValidationNotice;
 import org.mobilitydata.gtfsvalidator.notice.schema.ReferencesSchema.UrlReference;
 import org.mobilitydata.gtfsvalidator.table.GtfsEntity;
@@ -92,6 +93,12 @@ public class NoticeSchemaGenerator {
     }
 
     NoticeSchema schema = new NoticeSchema(Notice.getCode(noticeClass), severity);
+    // System errors are subclasses of SystemError. Their @GtfsValidationNotice severity is ERROR,
+    // which is also how NoticeContainer records them, so severity alone cannot separate them from
+    // GTFS spec violations.
+    if (SystemError.class.isAssignableFrom(noticeClass)) {
+      schema.setSystemError(true);
+    }
 
     if (noticeAnnotation != null) {
       if (noticeAnnotation.deprecated()) {

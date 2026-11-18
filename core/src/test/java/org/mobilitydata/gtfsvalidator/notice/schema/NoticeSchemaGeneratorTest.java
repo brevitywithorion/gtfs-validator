@@ -27,7 +27,9 @@ import java.util.Map;
 import org.junit.Test;
 import org.mobilitydata.gtfsvalidator.notice.DuplicateKeyNotice;
 import org.mobilitydata.gtfsvalidator.notice.ForeignKeyViolationNotice;
+import org.mobilitydata.gtfsvalidator.notice.IOError;
 import org.mobilitydata.gtfsvalidator.notice.NoticeDocComments;
+import org.mobilitydata.gtfsvalidator.notice.SeverityLevel;
 import org.mobilitydata.gtfsvalidator.notice.schema.ReferencesSchema.UrlReference;
 import org.mobilitydata.gtfsvalidator.notice.testnotices.DocumentedNotice;
 import org.mobilitydata.gtfsvalidator.notice.testnotices.S2LatLngNotice;
@@ -104,6 +106,36 @@ public class NoticeSchemaGeneratorTest {
     assertThat(refs.getUrlReferences())
         .containsExactly(new UrlReference("Coconuts", "http://coconuts.com"));
     assertThat(schema.getFields().get("value").getDescription()).isEqualTo("A field comment");
+  }
+
+  @Test
+  public void generateSchemaForNotice_systemError_isMarkedAndKeepsErrorSeverity() {
+    NoticeSchema schema = NoticeSchemaGenerator.generateSchemaForNotice(IOError.class);
+    assertThat(schema.isSystemError()).isTrue();
+    assertThat(schema.getSeverityLevel()).isEqualTo(SeverityLevel.ERROR);
+    assertThat(new GsonBuilder().create().toJson(schema)).contains("\"systemError\":true");
+
+    NoticeSchema validationNotice =
+        NoticeSchemaGenerator.generateSchemaForNotice(DuplicateKeyNotice.class);
+    assertThat(validationNotice.isSystemError()).isFalse();
+    assertThat(validationNotice.getSeverityLevel()).isEqualTo(SeverityLevel.ERROR);
+  }
+
+  @Test
+  public void generateSchemasForNoticesInPackages_marksOnlySystemErrors() {
+    Map<String, NoticeSchema> schemas =
+        NoticeSchemaGenerator.generateSchemasForNoticesInPackages(
+            ImmutableList.of("org.mobilitydata.gtfsvalidator.notice"));
+
+    assertThat(schemas.get("i_o_error").isSystemError()).isTrue();
+    assertThat(schemas.get("u_r_i_syntax_error").isSystemError()).isTrue();
+    assertThat(schemas.get("thread_execution_error").isSystemError()).isTrue();
+    assertThat(schemas.get("runtime_exception_in_loader_error").isSystemError()).isTrue();
+    assertThat(schemas.get("runtime_exception_in_validator_error").isSystemError()).isTrue();
+    assertThat(schemas.get("foreign_key_violation").isSystemError()).isFalse();
+    assertThat(schemas.get("foreign_key_violation").getSeverityLevel())
+        .isEqualTo(SeverityLevel.ERROR);
+    assertThat(schemas.values().stream().filter(NoticeSchema::isSystemError).count()).isEqualTo(5);
   }
 
   @Test
